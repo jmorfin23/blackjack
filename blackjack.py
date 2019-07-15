@@ -1,18 +1,11 @@
 from IPython.display import clear_output
 from random import randint
-#TODO:
+#TODO: add currency and betting
 
-#steps:
-#1.
-#2.
 class blackJack():
 
     def __init__(self):
         pass
-    def decorator(self, f):
-        print('–––––––––')
-        f()
-        print('–––––––––')
     def instructions(self):
         clear_output()
         print('–––––––––– How to Play BlackJack ––––––––––')
@@ -33,6 +26,9 @@ class blackJack():
 
         clear_output()
         if question == 'hit':
+            print(' ')
+            print('Player\'s Bet: ' + str(player.currency_to_bet))
+            print(' ')
             print('Players\'s Cards:')
             print('–––––––––––––––')
             player.dealCards()
@@ -43,9 +39,12 @@ class blackJack():
             print(' ')
             print('Dealer\'s Cards:')
             print('–––––––––––––––')
-            print(dealer.showCards())
+            print(dealer.showFirst_Card())
             return
 
+        print(' ')
+        print('Player\'s Bet: ' + str(player.currency_to_bet))
+        print(' ')
         print('Players\'s Cards:')
         print('–––––––––––––––')
         player.dealCards()
@@ -83,7 +82,7 @@ class blackJack():
         return
 
     def playerLose(self):
-        print('Sorry, you went over 21. You lost.')
+        print(f'Sorry, you went over 21. You lost: {player.currency_to_bet}')
         return
     def dealerLose(self):
         print('The dealer went over 21. You\'ve won!')
@@ -94,13 +93,24 @@ class blackJack():
     def tieGame(self):
         print('You tied!')
         return
+    def playerAddBet(self, bet_to_add):
+        player.bank = player.bank + bet_to_add
+
+    def playerLoseBet(self,bet_lost):
+        player.bank = player.bank - bet_lost
+
 class Player():
 
-    def __init__(self, cards = [], name = 'player', points = 0):
+    def __init__(self, cards = [], name = 'player', points = 0, bank = 1000):
         self.name = name
         self.cards = cards
         self.points = points
+        self.bank = bank
+        self.currency_to_bet = 0
         self.addpoints = []
+    def enterName(self):
+        question = input('Enter player name: ')
+        self.name = question.title()
 
     def getPoints(self):
         return self.points
@@ -124,6 +134,10 @@ class Player():
 
     def getCards(self):
         return self.cards
+
+
+    def resetCards(self):
+        self.cards = []
 
     #returns 2 random cards for the players hand
     def dealCards(self):
@@ -153,7 +167,6 @@ class Player():
         else:
             print('Sorry, the same card was dealt. Deal again.')
             #calls deal cards again to get another card
-#             self.addpoints = []
             player.dealCards()
 
 class Dealer():
@@ -163,6 +176,9 @@ class Dealer():
         self.name = name
         self.points = points
         self.addpoints = []
+
+    def resetCards(self):
+        self.cards = []
 
     def getPoints(self):
         return self.points
@@ -182,7 +198,8 @@ class Dealer():
         self.points = sum(self.addpoints)
     def showCards(self):
         return dealer.cards
-
+    def showFirst_Card(self):
+        return dealer.cards[0]
     def getCards(self):
         return self.cards
     #returns 2 random cards for the dealers hand
@@ -214,6 +231,9 @@ class Dealer():
             #calls deal cards again to get another card
 #             self.addpoints = []
             dealer.dealCards()
+            dealer.addPoints()
+
+
 
 
 
@@ -223,26 +243,49 @@ print('Welcome to BlackJack!')
 print(' ')
 print('Press enter to play, quit to exit, or i for instructions on how to play. ')
 
+
 active = True
+#creating instances
+bj = blackJack()
+player = Player(cards = [], bank = 1000)
+dealer = Dealer(cards = [])
+player.enterName()
 while active:
 
     #for game loop
     playing = True
 
-    #creating instances
-    bj = blackJack()
-    player = Player()
-    dealer = Dealer()
+    player.resetCards()
+    dealer.resetCards()
 
+    #i shouldnt have to do this it should automatically get reset?
+#     print(dealer.cards)
+#     print(player.cards)
+#     print(player.bank)
+    print(' ')
+    print(f"Hi {player.name}!")
+    print(' ')
+    print(f'Player\'s Bank: {player.bank}')
     question = input('What would you like to do? ').lower()
 
     if question == 'quit':
         break
     elif question == 'i':
         bj.instructions()
+        continue
     else:
         clear_output()
+        print(f'Player\'s Bank: {player.bank}')
+        money = int(input('How much would you like to bet? '))
+        if money > player.bank:
+            print('Sorry, you don\'t have enough money to bet that much.')
+            print('')
+            print('Please come back when you get more money.')
+            break
+        player.currency_to_bet = money
+        clear_output()
         while playing:
+
             bj.gameLoop(player,dealer, question)
 
 
@@ -256,23 +299,25 @@ while active:
             #check if it is the start of the game to deal 2 cards first
             if len(player.cards) < 2:
                 continue
-
-            #checking if player wins
-            if player.points == 21:
-                bj.playerBlackJack()
-                break
-
-            #checking if you bust
-            if player.points > 21:
-                bj.playerLose()
-                break
             #dont know if this is the best spot for this
             if dealer.points < 17:
                 dealer.dealCards()
                 dealer.addPoints()
 
+            #checking if player wins
+            if player.points == 21:
+                bj.playerBlackJack()
+                bj.playerAddBet(player.currency_to_bet)
+                break
 
-            print(' ')
+            #checking if you bust
+            if player.points > 21:
+                bj.playerLose()
+                bj.playerLoseBet(player.currency_to_bet)
+                break
+
+
+
             print('Hit or Stay?')
             print(' ')
             question = input('What would you like to do? ').lower()
@@ -297,6 +342,8 @@ while active:
 
                 if player.points > dealer.points and player.points < 21:
                     bj.playerWin()
+                    bj.playerAddBet(player.currency_to_bet)
+
                     break
                 elif player.points == dealer.points:
                     bj.tieGame()
@@ -304,9 +351,11 @@ while active:
                 elif dealer.points > 21:
                     bj.dealerLose()
                     bj.playerWin()
+                    bj.playerAddBet(player.currency_to_bet)
                     break
                 else:
                     bj.dealerWin()
+                    bj.playerLoseBet(player.currency_to_bet)
                     break
 
 
@@ -315,12 +364,13 @@ while active:
                 playing = False
                 active = False
                 print('Thanks for playing.')
-
+    print(' ')
+    print(f'Player\'s Bank: {player.bank}')
     #checks if player would like to play again
     question = input('Would you like to play again?').lower()
 
     if question == 'no':
         break
     else:
-        #goes back to top and resets all variables
-        break
+        #goes back to top and resets all variables? but this doesnt seem to work?
+        clear_output()
